@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 # from torch_model.torch_args.torch_param import EmbeddingParam
 
@@ -66,3 +67,54 @@ class ContinuousEmbedding(nn.Module):
         embedding = self.emb(arange)
         e = (scale.unsqueeze(-1) * embedding).sum(-2)
         return e
+
+
+class DynEmbedding(nn.Module):
+    def __init__(self, embedding_dim, optimizer, emb_step=1000, padding_idx=None, max_norm=None,
+                 norm_type=2.0, scale_grad_by_freq=False, sparse=False, device=None):
+        super().__init__()
+        self.optimizer = optimizer
+        self.embedding_dim = embedding_dim
+        self.emb_step = emb_step
+        # self.padding_idx = padding_idx
+        self.max_norm = max_norm
+        self.norm_type = norm_type
+        self.scale_grad_by_freq = scale_grad_by_freq
+        self.sparse = sparse
+        self.device=device
+        self.params = list()
+        self.index_map = dict()
+        self.cnt = 0
+
+        if padding_idx is not None:
+            self.cnt = 1
+            self.add_param()
+            self.index_map[padding_idx] = 0
+
+    def add_param(self):
+        self.params.append(
+            Embedding(
+                self.emb_step,
+                self.embedding_dim,
+                max_norm=self.max_norm,
+                norm_type=self.norm_type,
+                scale_grad_by_freq=self.scale_grad_by_freq,
+                sparse=self.sparse
+            ).to(self.device))
+        self.optimizer.add_param(self.params[-1].parameters())
+
+    def forward(self, x):
+        _shape = x.shape
+        res = list()
+        for _x in x.reshape(-1):
+            _x = int(_x)
+            if _x not in self.index_map:
+                self.index_map[_x] = self.cnt
+                self.cnt += 1
+                if self.cnt % self.emb_step == 1:
+                    self.add_param()
+            index = self.index_map[_x]
+            res.append(self.params[index // self.emb_step](torch.tensor(index % self.emb_step, device=self.device)))
+        res = torch.cat(res).reshape(_shape + (self.embedding_dim,))
+        return res
+

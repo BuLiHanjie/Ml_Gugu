@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from torch_model.str_to_function import str_to_activation
+from pytorch_model.str_to_function import str_to_activation
 
 
 class Linear(nn.Module):

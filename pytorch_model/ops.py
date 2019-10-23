@@ -1,4 +1,4 @@
-from torch_model.str_to_function import str_top_optimizer, str_to_metric
+from pytorch_model.str_to_function import str_top_optimizer, str_to_metric
 
 
 def evaluate(metrics):

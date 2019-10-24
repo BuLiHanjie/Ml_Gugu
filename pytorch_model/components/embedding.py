@@ -107,7 +107,7 @@ class DynEmbedding(nn.Module):
         _shape = x.shape
         res = list()
         for _x in x.reshape(-1):
-            _x = int(_x)
+            # _x = int(_x)
             if _x not in self.index_map:
                 self.index_map[_x] = self.cnt
                 self.cnt += 1
@@ -118,3 +118,15 @@ class DynEmbedding(nn.Module):
         res = torch.cat(res).reshape(_shape + (self.embedding_dim,))
         return res
 
+if __name__ == '__main__':
+    import sys
+    sys.path.append('..')
+    from optimizer.sgd import SGD
+    optimizer = SGD([nn.Parameter(torch.tensor([-np.inf]))])
+    model = DynEmbedding(3, optimizer)
+    model.train()
+    s = model.forward(np.array(['a', 'b', 'd']))
+    print(s)
+    model.eval()
+    s = model.forward(np.array(['a', 'b', 'd', 'e']))
+    print(s)

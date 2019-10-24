@@ -2,10 +2,10 @@ import numpy as np
 import time
 import torch
 import torch.nn as nn
-from torch_model.mlp import Mlp, Linear
-from torch_model.ops import get_optimizer
-from torch_model.ops import evaluate
-from torch_model.ops import str_to_metric
+from pytorch_model.mlp import Mlp, Linear
+from pytorch_model.ops import get_optimizer
+from pytorch_model.ops import evaluate
+from pytorch_model.ops import str_to_metric
 
 
 class ClassifierBase(nn.Module):

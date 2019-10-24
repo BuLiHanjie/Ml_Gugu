@@ -1,28 +1,29 @@
 import torch
 from torch import nn
 
-from torch_model.mlp import Mlp, Linear
-from torch_model.torch_args.torch_param import DeepFmParam
+from pytorch_model.mlp import Mlp, Linear
 
 
 class DeepFm(nn.Module):
-    def __init__(self, param: DeepFmParam):
+    def __init__(self, embedding_dim, deep_dim,
+                 mlp_hidden_layers, mlp_activations,
+                 linear_out_features, linear_activaions):
         super().__init__()
         self.deep_mlp = Mlp(
-            in_features=param.deep_dim,
-            hidden_layers=param.mlp_hidden_layers,
-            activations=param.mlp_activations,
+            in_features=deep_dim,
+            hidden_layers=mlp_hidden_layers,
+            activations=mlp_activations,
         )
         self.fm_linear = Linear(
-            in_features=param.emedding_dim * 2 + param.mlp_hidden_layers[-1],
-            out_features=param.linear_out_features,
-            activation=param.linear_activaions
+            in_features=embedding_dim * 2 + mlp_hidden_layers[-1],
+            out_features=linear_out_features,
+            activation=linear_activaions
         )
 
     def forward(self, deep_term, first_order_emb, second_order_emb):
         '''
         deepfm
-        :param deep_emb: None * F * K
+        :param deep_term: None * F * K
         :param first_order_emb: None * F or [None] * F
         :param second_order_emb: None * F * K or [None * K] * F
         :return:

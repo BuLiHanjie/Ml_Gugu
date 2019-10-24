@@ -109,12 +109,15 @@ class DynEmbedding(nn.Module):
         for _x in x.reshape(-1):
             # _x = int(_x)
             if _x not in self.index_map:
-                self.index_map[_x] = self.cnt
-                self.cnt += 1
-                if self.cnt % self.emb_step == 1:
-                    self.add_param()
-            index = self.index_map[_x]
-            res.append(self.params[index // self.emb_step](torch.tensor(index % self.emb_step, device=self.device)))
+                if self.training:
+                    self.index_map[_x] = self.cnt
+                    self.cnt += 1
+                    if self.cnt % self.emb_step == 1:
+                        self.add_param()
+                    index = self.index_map[_x]
+                    res.append(self.params[index // self.emb_step](torch.tensor(index % self.emb_step, device=self.device)))
+                else:
+                    res.append(torch.zeros(self.embedding_dim, dtype=torch.float, device=self.device))
         res = torch.cat(res).reshape(_shape + (self.embedding_dim,))
         return res
 

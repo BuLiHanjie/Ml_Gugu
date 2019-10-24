@@ -1,20 +1,15 @@
 import torch
 import torch.nn as nn
 
-# from torch_model.str_to_function import str_to_activation
-from torch_model.torch_args.torch_param import LinearParam, MlpParam
+from ..str_to_function import str_to_activation
 
 
 class Linear(nn.Module):
 
-    def __init__(self, param: LinearParam):
+    def __init__(self, in_features, out_features, activation, bias=True):
         super().__init__()
-        self.linear = nn.Linear(
-            param.in_features,
-            param.out_features,
-            bias=param.bias
-        )
-        self.activate = param.activation
+        self.linear = nn.Linear(in_features, out_features, bias=bias)
+        self.activate = str_to_activation(activation) if isinstance(activation, str) else activation
 
     def forward(self, x):
         x = self.linear(x)
@@ -25,18 +20,18 @@ class Linear(nn.Module):
 
 class Mlp(nn.Module):
 
-    def __init__(self, param: MlpParam):
+    def __init__(self, in_features, hidden_layers, activations, bias=True):
         super().__init__()
+        if not isinstance(activations, list):
+            activations = [activations] * len(hidden_layers)
         layers = list()
-        for i, (_h, _activate, _b) in enumerate(zip(param.hidden_layers, param.activations, param.bias)):
+        for i, (_h, _activate) in enumerate(zip(hidden_layers, activations)):
             layers.append(
                 Linear(
-                    LinearParam(
-                        in_features=param.in_features,
-                        out_features=_h,
-                        activation=_activate,
-                        bias=_b
-                    )
+                    in_features=in_features if i == 0 else hidden_layers[i - 1],
+                    out_features=_h,
+                    activation=_activate,
+                    bias=bias
                 )
             )
         self.model = nn.Sequential(
@@ -45,4 +40,3 @@ class Mlp(nn.Module):
 
     def forward(self, x):
         return self.model(x)
-

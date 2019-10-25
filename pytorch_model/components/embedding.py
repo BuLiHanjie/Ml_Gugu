@@ -81,7 +81,7 @@ class DynEmbedding(nn.Module):
         self.norm_type = norm_type
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
-        self.device=device
+        self.device = device
         self.params = list()
         self.index_map = dict()
         self.cnt = 0
@@ -101,6 +101,8 @@ class DynEmbedding(nn.Module):
                 scale_grad_by_freq=self.scale_grad_by_freq,
                 sparse=self.sparse
             ).to(self.device))
+        self.add_module('params_{}'.format(len(self.params) - 1), self.params[-1])
+        # self.register_parameter('params_{}'.format(len(self.params) - 1), self.params[-1])
         self.optimizer.add_param(self.params[-1].parameters())
 
     def forward(self, x):
@@ -118,18 +120,46 @@ class DynEmbedding(nn.Module):
                     res.append(self.params[index // self.emb_step](torch.tensor(index % self.emb_step, device=self.device)))
                 else:
                     res.append(torch.zeros(self.embedding_dim, dtype=torch.float, device=self.device))
+            else:
+                index = self.index_map[_x]
+                res.append(self.params[index // self.emb_step](torch.tensor(index % self.emb_step, device=self.device)))
         res = torch.cat(res).reshape(_shape + (self.embedding_dim,))
         return res
 
-if __name__ == '__main__':
-    import sys
-    sys.path.append('..')
-    from optimizer.sgd import SGD
-    optimizer = SGD([nn.Parameter(torch.tensor([-np.inf]))])
-    model = DynEmbedding(3, optimizer)
-    model.train()
-    s = model.forward(np.array(['a', 'b', 'd']))
-    print(s)
-    model.eval()
-    s = model.forward(np.array(['a', 'b', 'd', 'e']))
-    print(s)
+    def state_dict(self, *args, **kwargs):
+        # self.register_parameter('map_keys', nn.Parameter(torch.tensor(['a', 'b'])))
+        # for i in range(len(self.params)):
+        #     self.add_module('params_{}'.format(i), self.params[i])
+        res = super().state_dict(*args, **kwargs)
+        print('sate dict args:', args)
+        prefix = args[1]
+        res[prefix + 'map_keys'] = '\01'.join(self.index_map.keys())
+        res[prefix + 'map_values'] = '\01'.join([str(v) for v in self.index_map.values()])
+        return res
+
+
+    def _load_from_state_dict(self, *args, **kwargs):
+        state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs = args
+        print(state_dict)
+        print('metadata:', getattr(state_dict, '_metadata', None))
+        for k, v in zip(state_dict[prefix + 'map_keys'].split('\01'), state_dict[prefix + 'map_values'].split('\01')):
+            self.index_map[k] = int(v)
+        # for i in range(add_param)
+        print(self.index_map)
+        index = 0
+        while 1:
+            key = prefix + 'params_{}'.format(index) + '.weight'
+            if key not in state_dict:
+                break
+            self.add_param()
+            self.params[-1]._load_from_state_dict(
+                state_dict,
+                prefix + 'params_{}.'.format(index),
+                *args[2:]
+            )
+            del state_dict[prefix + 'params_{}'.format(index) + '.weight']
+            del state_dict[prefix + 'params_{}'.format(index) + '.bias']
+        del state_dict[prefix + 'map_keys']
+        del state_dict[prefix + 'map_values']
+        print('asdasdsadas')
+        super()._load_from_state_dict(*args, **kwargs)

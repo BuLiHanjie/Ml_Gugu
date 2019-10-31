@@ -110,6 +110,7 @@ class DynEmbedding(nn.Module):
         res = list()
         for _x in x.reshape(-1):
             # _x = int(_x)
+            _x = str(_x)
             if _x not in self.index_map:
                 if self.training:
                     self.index_map[_x] = self.cnt

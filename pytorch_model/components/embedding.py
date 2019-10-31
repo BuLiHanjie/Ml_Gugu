@@ -132,7 +132,7 @@ class DynEmbedding(nn.Module):
         # for i in range(len(self.params)):
         #     self.add_module('params_{}'.format(i), self.params[i])
         res = super().state_dict(*args, **kwargs)
-        print('sate dict args:', args)
+        # print('sate dict args:', args)
         prefix = args[1]
         res[prefix + 'map_keys'] = '\01'.join(self.index_map.keys())
         res[prefix + 'map_values'] = '\01'.join([str(v) for v in self.index_map.values()])
@@ -141,26 +141,30 @@ class DynEmbedding(nn.Module):
 
     def _load_from_state_dict(self, *args, **kwargs):
         state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs = args
-        print(state_dict)
-        print('metadata:', getattr(state_dict, '_metadata', None))
-        for k, v in zip(state_dict[prefix + 'map_keys'].split('\01'), state_dict[prefix + 'map_values'].split('\01')):
-            self.index_map[k] = int(v)
-        # for i in range(add_param)
-        print(self.index_map)
+        # print('state_dict meta data:', state_dict._metadata)
+        # print('metadata:', getattr(state_dict, '_metadata', None))
+        # print('_load_from_state_dict state_dict:', state_dict)
+        # print('local meta:', local_metadata)
+        # print(prefix, state_dict[prefix + 'map_keys'], state_dict[prefix + 'map_values'])
+        if len(state_dict[prefix + 'map_keys']) > 0:
+            for k, v in zip(state_dict[prefix + 'map_keys'].split('\01'), state_dict[prefix + 'map_values'].split('\01')):
+                self.index_map[k] = int(v)
+
         index = 0
         while 1:
-            key = prefix + 'params_{}'.format(index) + '.weight'
+            key = prefix + 'params_{}'.format(index) + '.emb.weight'
             if key not in state_dict:
                 break
             self.add_param()
             self.params[-1]._load_from_state_dict(
                 state_dict,
                 prefix + 'params_{}.'.format(index),
-                *args[2:]
+                local_metadata.get(prefix[:-1], {}),
+                *args[3:]
             )
-            del state_dict[prefix + 'params_{}'.format(index) + '.weight']
-            del state_dict[prefix + 'params_{}'.format(index) + '.bias']
+            index += 1
+            # del state_dict[prefix + 'params_{}'.format(index) + '.weight']
+            # del state_dict[prefix + 'params_{}'.format(index) + '.bias']
         del state_dict[prefix + 'map_keys']
         del state_dict[prefix + 'map_values']
-        print('asdasdsadas')
         super()._load_from_state_dict(*args, **kwargs)

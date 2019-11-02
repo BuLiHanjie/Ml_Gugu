@@ -125,7 +125,7 @@ class DynEmbedding(nn.Module):
                     res.append(torch.zeros(self.embedding_dim, dtype=torch.float, device=self.device))
             else:
                 index = self.index_map[_x]
-                res.append(self.params[index // self.emb_step](self.torch_index_map(_x)))
+                res.append(self.params[index // self.emb_step](self.torch_index_map[_x]))
         res = torch.cat(res).reshape(_shape + (self.embedding_dim,))
         return res
 
